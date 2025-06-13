@@ -57,19 +57,21 @@ jobs:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
 
-      - name: Deploy
+      - name: Deploy to remote serverAdd commentMore actions
         run: |
-          ssh -o ConnectTimeout=15 -p ${{ secrets.PORT }} ${{ secrets.USER }}@${{ secrets.HOST }} exit || {
-          echo "Cannot connect to server";
-          exit 1;}
+          ssh -o StrictHostKeyChecking=no -p 58529 \
+          ${{ secrets.USER }}@${{ secrets.HOST }} \
+          "podman stop myapp || true && podman rm myapp || true"
+    
+          docker save myapp:final | ssh -p 58529 \
+          ${{ secrets.USER }}@${{ secrets.HOST }} \
+          "podman load && podman tag myapp:final myapp:final"
 
-          docker save myapp:final | ssh -p ${{ secrets.PORT }} ${{ secrets.USER }}@${{ secrets.HOST }} "
-          podman load || exit 1
-          podman tag myapp:final myapp:final || exit 1
-          "
-
-          ssh -p ${{ secrets.PORT }} ${{ secrets.USER }}@${{ secrets.HOST }} "
-          podman stop myapp || true
-          podman rm myapp || true
-          podman run -d --name myapp --network=host myapp:final
-          "
+          ssh -o StrictHostKeyChecking=no \
+          -p ${{ secrets.PORT }} \
+          ${{ secrets.USER }}@${{ secrets.HOST }} \
+          "podman stop myapp || true && \
+          podman rm myapp || true && \
+          podman run -d --name myapp \
+          --network=host \
+          myapp:final"
