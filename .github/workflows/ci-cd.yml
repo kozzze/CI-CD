@@ -59,8 +59,11 @@ jobs:
 
       - name: Deploy to remote server
         run: |
-          docker save myapp:final | ssh -o StrictHostKeyChecking=no \
-          -p ${{ secrets.PORT }} \
+          ssh -o StrictHostKeyChecking=no -p 58529 \
+          ${{ secrets.USER }}@${{ secrets.HOST }} \
+          "podman stop myapp || true && podman rm myapp || true"
+    
+          docker save myapp:final | ssh -p 58529 \
           ${{ secrets.USER }}@${{ secrets.HOST }} \
           "podman load && podman tag myapp:final myapp:final"
 
