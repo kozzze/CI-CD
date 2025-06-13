@@ -1,13 +1,13 @@
-FROM python:3.11-slim as builder
-WORKDIR /app
-COPY pyproject.toml ./
-RUN pip install .[test]
-COPY . .
+FROM python:3.11-alpine
 
-FROM python:3.11-slim
-RUN useradd -m appuser
+RUN apk update && apk upgrade
+
+
 WORKDIR /app
-COPY --from=builder /app /app
-RUN pip install --no-cache-dir .
-USER appuser
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8078"]
+
+
+COPY . .
+RUN pip install .
+RUN pip install pytest>=6.2.5
+RUN pip install pytest-asyncio==0.25.3
+RUN pip install httpx==0.28.1
