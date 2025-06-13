@@ -1,0 +1,74 @@
+name: CI-CD  
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-test-deploy: 
+    runs-on: self-hosted 
+
+    services:  
+      postgres:
+        image: postgres:14  
+        env: 
+          POSTGRES_DB: kubsu
+          POSTGRES_USER: kubsu
+          POSTGRES_PASSWORD: kubsu
+        ports:
+          - 5432:5432  
+        options: >- 
+          --health-cmd "pg_isready -U kubsu"
+          --health-interval 15s
+          --health-timeout 10s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Wait for Postgres
+        run: |
+          until pg_isready -h localhost -p 5432 -U kubsu; do
+            echo "Waiting"
+            sleep 3
+          done
+
+      - name: Build Docker image
+        run: docker build -t myapp:test .
+
+      - name: Build test image
+        run: docker build --target builder -t myapp:test .
+
+      - name: Run tests
+        run: |
+          docker run --rm \
+          --network host \
+          -e PYTHONPATH=/app \
+          myapp:test pytest tests
+
+      - name: Build prod image
+        run: docker build -t myapp:final .
+
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.5.4 
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+
+      - name: Deploy to remote server
+        run: |
+          docker save myapp:final | ssh -o StrictHostKeyChecking=no \
+          -p ${{ secrets.PORT }} \
+          ${{ secrets.USER }}@${{ secrets.HOST }} \
+          "podman load && podman tag myapp:final myapp:final"
+
+          ssh -o StrictHostKeyChecking=no \
+          -p ${{ secrets.PORT }} \
+          ${{ secrets.USER }}@${{ secrets.HOST }} \
+          "podman stop myapp || true && \
+          podman rm myapp || true && \
+          podman run -d --name myapp \
+          --network=host \
+          myapp:final"
