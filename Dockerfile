@@ -1,4 +1,4 @@
-FROM python:3.11-alpine
+FROM python:3.11-alpine as builder
 
 RUN apk update && apk upgrade
 
