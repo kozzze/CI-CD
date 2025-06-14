@@ -59,7 +59,7 @@ jobs:
 
       - name: Deploy to remote server
         env:
-          SSH_OPTS: "-o ConnectTimeout=30 -o StrictHostKeyChecking=no"
+          SSH_OPTS: "-o ConnectTimeout=60 -o StrictHostKeyChecking=no"
         run: |
           ssh $SSH_OPTS -p ${{ secrets.PORT }} \
             ${{ secrets.USER }}@${{ secrets.HOST }} \
