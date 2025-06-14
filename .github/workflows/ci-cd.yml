@@ -57,21 +57,23 @@ jobs:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
 
-      - name: Deploy to remote serverAdd commentMore actions
+      - name: Deploy to remote server
+        env:
+          SSH_OPTS: "-o ConnectTimeout=30 -o StrictHostKeyChecking=no"
         run: |
-          ssh -o StrictHostKeyChecking=no -p 58529 \
-          ${{ secrets.USER }}@${{ secrets.HOST }} \
-          "podman stop myapp || true && podman rm myapp || true"
-    
-          docker save myapp:final | ssh -p 58529 \
-          ${{ secrets.USER }}@${{ secrets.HOST }} \
-          "podman load && podman tag myapp:final myapp:final"
-
-          ssh -o StrictHostKeyChecking=no \
-          -p ${{ secrets.PORT }} \
-          ${{ secrets.USER }}@${{ secrets.HOST }} \
-          "podman stop myapp || true && \
-          podman rm myapp || true && \
-          podman run -d --name myapp \
-          --network=host \
-          myapp:final"
+          ssh $SSH_OPTS -p ${{ secrets.PORT }} \
+            ${{ secrets.USER }}@${{ secrets.HOST }} \
+            "podman stop myapp || true; \
+             podman rm myapp || true"
+         
+          docker save myapp:final | \
+          ssh $SSH_OPTS -p ${{ secrets.PORT }} \
+            ${{ secrets.USER }}@${{ secrets.HOST }} \
+            "podman load && podman tag myapp:final myapp:final"
+          
+          ssh $SSH_OPTS -p ${{ secrets.PORT }} \
+            ${{ secrets.USER }}@${{ secrets.HOST }} \
+            "podman run -d --name myapp \
+             --restart=always \
+             --network=host \
+             myapp:final"
